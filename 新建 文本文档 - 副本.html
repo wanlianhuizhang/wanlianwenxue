@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万联网文 · 工作室内部系统（老板权限全功能版）</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' https: 'unsafe-inline'; style-src 'self' https: 'unsafe-inline';">
+    <style>
+        body { background-color: #f4f6f9; }
+        .sidebar { min-height: 100vh; background: #1e2a3a; color: #fff; }
+        .sidebar a { color: #b0c4de; text-decoration: none; padding: 0.5rem 1rem; display: block; border-radius: 0.25rem; margin: 0.2rem 0; }
+        .sidebar a:hover, .sidebar a.active { background: #2c3e50; color: #fff; }
+        .content { padding: 2rem; }
+        .card { box-shadow: 0 0 10px rgba(0,0,0,0.05); border: none; margin-bottom: 1.5rem; }
+        .login-container { max-width: 900px; margin: 3rem auto; }
+        .login-card { border: none; border-radius: 1rem; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        .hidden { display: none !important; }
+        .permission-tag { background-color: #e2e6ea; color: #1e2a3a; padding: 0.2rem 0.5rem; border-radius: 1rem; font-size: 0.75rem; margin-right: 0.2rem; display: inline-block; }
+        .btn-permission { padding: 0.2rem 0.5rem; font-size: 0.7rem; margin: 2px; }
+        .role-boss { background-color: #dc3545; color: white; }
+        .role-admin { background-color: #0d6efd; color: white; }      /* 高级管理员 */
+        .role-manager { background-color: #fd7e14; color: white; }    /* 普通管理员（组长） */
+        .role-member { background-color: #6c757d; color: white; }
+        .table-responsive { background: white; border-radius: 0.5rem; padding: 1rem; }
+        .discuss-messages { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 0.5rem; }
+        .msg-item { margin-bottom: 0.75rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.5rem; }
+        .notification-badge { cursor: pointer; }
+        .notification-list { max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <!-- 登录/注册区域 -->
+    <div id="loginContainer" class="container login-container">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card login-card p-4">
+                    <h3 class="text-center mb-3">🔐 登录</h3>
+                    <div class="mb-3">
+                        <label class="form-label">账号</label>
+                        <input type="text" id="loginAccount" class="form-control" placeholder="纯英文">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">密码</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="数字+英文">
+                    </div>
+                    <button class="btn btn-primary w-100" id="loginBtn">登录</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card login-card p-4">
+                    <h3 class="text-center mb-3">📝 注册</h3>
+                    <div class="mb-2">
+                        <label class="form-label">笔名</label>
+                        <input type="text" id="regNickname" class="form-control" placeholder="如何称呼">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">账号 <span class="text-muted">(纯英文)</span></label>
+                        <input type="text" id="regAccount" class="form-control" placeholder="例如: qingya">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">密码 <span class="text-muted">(数字+英文)</span></label>
+                        <input type="password" id="regPassword" class="form-control" placeholder="例如: abc123">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">确认密码</label>
+                        <input type="password" id="regConfirm" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">主组别 (创作组)</label>
+                        <select id="regGroup" class="form-select">
+                            <!-- 动态从存储加载 -->
+                        </select>
+                    </div>
+                    <button class="btn btn-success w-100" id="registerBtn">注册并登录</button>
+                    <div class="mt-3 small text-danger" id="regMessage"></div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-text text-center mt-4">安全防护 · 账号纯英文 / 密码数字英文结合</div>
+    </div>
+
+    <!-- 主应用区域 -->
+    <div id="appContainer" class="container-fluid p-0 hidden">
+        <div class="row g-0">
+            <div class="col-md-2 sidebar p-3" id="sidebar"></div>
+            <div class="col-md-10 content" id="mainContent"></div>
+        </div>
+    </div>
+
+    <!-- 作家平台风格投稿模态框 -->
+    <div class="modal fade" id="writerPostModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📝 发布新作品</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="postForm">
+                        <div class="mb-3">
+                            <label class="form-label">标题 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="postTitle" placeholder="例如：飞升之后第三十一章">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">简介 / 导语</label>
+                            <textarea class="form-control" id="postDescription" rows="2" placeholder="用几句话吸引读者..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">正文 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="postContent" rows="8" placeholder="在这里输入正文..."></textarea>
+                            <div class="form-text mt-1">字数统计：<span id="wordCount">0</span> 字（仅中文字符）</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">所属组别</label>
+                                <select class="form-select" id="postGroup">
+                                    <!-- 动态填充 -->
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">标签（可选）</label>
+                                <input type="text" class="form-control" id="postTags" placeholder="仙侠, 爽文">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="submitPostBtn">发布投稿</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提现申请模态框（带账号信息） -->
+    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">💰 申请提现</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="withdrawForm">
+                        <div class="mb-3">
+                            <label class="form-label">提现金额</label>
+                            <input type="number" class="form-control" id="withdrawAmount" min="1" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">选择收款方式</label>
+                            <select class="form-select" id="withdrawMethod">
+                                <option value="微信">微信</option>
+                                <option value="支付宝">支付宝</option>
+                                <option value="银行卡">银行卡</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">收款账号</label>
+                            <input type="text" class="form-control" id="withdrawAccount" placeholder="微信号 / 支付宝账号 / 银行卡号" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">备注（可选）</label>
+                            <input type="text" class="form-control" id="withdrawNote">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-success" id="submitWithdrawBtn">提交申请</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 审阅模态框 -->
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📄 文案审阅</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalPostInfo"></div>
+                    <hr>
+                    <h6>📝 文案内容</h6>
+                    <div id="modalContent" class="border p-3 bg-light" style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
+                    <hr>
+                    <h6>💬 审阅批复</h6>
+                    <div id="modalReviews" class="mb-3"></div>
+                    <div id="reviewInputArea" class="mt-2">
+                        <textarea id="reviewComment" class="form-control" rows="2" placeholder="写下你的批复..."></textarea>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-success" id="submitReviewApprove">通过</button>
+                            <button class="btn btn-sm btn-warning" id="submitReviewReject">退回</button>
+                            <button class="btn btn-sm btn-secondary" id="submitReviewComment">仅评论</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加组别模态框（仅老板） -->
+    <div class="modal fade" id="addGroupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ 新增组别</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control" id="newGroupName" placeholder="组别名称（例如：轻小说）">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="submitAddGroup">添加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ==================== 全新重构代码（包含所有功能）====================
+        (function() {
+            // ---------- 存储键 ----------
+            const STORAGE_USERS = 'wanlian_users';
+            const STORAGE_POSTS = 'wanlian_posts';
+            const STORAGE_PROGRESS = 'wanlian_progress';
+            const STORAGE_ROYALTIES = 'wanlian_royalties';
+            const STORAGE_NOTICES = 'wanlian_notices';
+            const STORAGE_DISCUSS = 'wanlian_discuss';
+            const STORAGE_GROUPS = 'wanlian_groups';        // 动态组别列表
+            const STORAGE_WITHDRAWALS = 'wanlian_withdrawals'; // 提现申请
+            const STORAGE_NOTIFICATIONS = 'wanlian_notifications'; // 通知
+
+            // ---------- 默认数据初始化 ----------
+            function initData() {
+                // 组别：初始包含创作组和管理组，后续可动态增加
+                if (!localStorage.getItem(STORAGE_GROUPS)) {
+                    const defaultGroups = [
+                        "传统修仙", "异常档案", "规则怪谈", "系统修仙", "国运副本",
+                        "爽文修仙", "异能都市", "反派修仙", "弱系统流警探", "反系统异世界", "末世争霸",
+                        "综合管理组", "内容审核组", "项目执行组"
+                    ];
+                    localStorage.setItem(STORAGE_GROUPS, JSON.stringify(defaultGroups));
+                }
+
+                // 用户
+                if (!localStorage.getItem(STORAGE_USERS)) {
+                    const users = [
+                        { account: 'laoban', password: '080415zqx', nickname: '邹秦雄', role: 'boss', group: '综合管理组', extraGroups: [] },
+                        { account: 'zonghe', password: 'abc123', nickname: '决策者', role: 'admin', group: '综合管理组', extraGroups: [] },
+                        { account: 'shenhe', password: 'abc123', nickname: '审核官', role: 'admin', group: '内容审核组', extraGroups: [] },
+                        { account: 'zhixing', password: 'abc123', nickname: '执行者', role: 'admin', group: '项目执行组', extraGroups: [] },
+                        { account: 'qingya', password: 'abc123', nickname: '青崖', role: 'manager', group: '传统修仙', extraGroups: ['规则怪谈'] },
+                        { account: 'jingsong', password: 'abc123', nickname: '惊悚', role: 'manager', group: '规则怪谈', extraGroups: [] },
+                        { account: 'yunzhongzi', password: 'abc123', nickname: '云中子', role: 'member', group: '传统修仙', extraGroups: [] },
+                        { account: 'heimao', password: 'abc123', nickname: '黑猫', role: 'member', group: '规则怪谈', extraGroups: [] },
+                        { account: 'feitu', password: 'abc123', nickname: '废土', role: 'member', group: '末世争霸', extraGroups: [] },
+                        { account: 'yaolao', password: 'abc123', nickname: '药老', role: 'member', group: '传统修仙', extraGroups: [] },
+                    ];
+                    localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
+                }
+
+                // 投稿
+                if (!localStorage.getItem(STORAGE_POSTS)) {
+                    const posts = [
+                        { id: Date.now() + 1, group: '传统修仙', title: '《飞升之后》第30章', author: '青崖', time: '2025-03-12', words: 4120, content: '这里是飞升之后第三十章的正文内容……', description: '飞升之后的世界', tags: ['仙侠'], reviews: [] },
+                        { id: Date.now() + 2, group: '规则怪谈', title: '《别熬夜》副本', author: '黑猫', time: '2025-03-12', words: 3870, content: '别熬夜的规则怪谈故事……', description: '', tags: [], reviews: [] },
+                    ];
+                    localStorage.setItem(STORAGE_POSTS, JSON.stringify(posts));
+                }
+
+                // 考核进度（基于组别动态生成）
+                if (!localStorage.getItem(STORAGE_PROGRESS)) {
+                    const groups = JSON.parse(localStorage.getItem(STORAGE_GROUPS)) || [];
+                    const progress = groups.map(g => ({
+                        group: g, outlineDone: Math.random() > 0.3, weekWords: Math.floor(Math.random()*15000+10000), target: 28000
+                    }));
+                    localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(progress));
+                }
+
+                // 稿费
+                if (!localStorage.getItem(STORAGE_ROYALTIES)) {
+                    const royalties = [
+                        { id: 1, user: '青崖', group: '传统修仙', amount: 1200, status: '已发' },
+                        { id: 2, user: '黑猫', group: '规则怪谈', amount: 850, status: '待确认' },
+                        { id: 3, user: '废土', group: '末世争霸', amount: 2300, status: '提取中' },
+                    ];
+                    localStorage.setItem(STORAGE_ROYALTIES, JSON.stringify(royalties));
+                }
+
+                // 通知
+                if (!localStorage.getItem(STORAGE_NOTICES)) {
+                    const notices = [
+                        { id: 1, title: '关于3月稿费延迟发放的通知', publisher: '邹秦雄', role: 'boss', time: '2025-03-12', top: true },
+                        { id: 2, title: '下周各组必须完成大纲', publisher: '青崖', role: 'manager', time: '2025-03-10', top: false },
+                    ];
+                    localStorage.setItem(STORAGE_NOTICES, JSON.stringify(notices));
+                }
+
+                // 讨论
+                if (!localStorage.getItem(STORAGE_DISCUSS)) {
+                    const msgs = [
+                        { group: '传统修仙', user: '青崖', message: '大纲今晚交', time: new Date().toLocaleString() },
+                        { group: '传统修仙', user: '云中子', message: '收到', time: new Date().toLocaleString() },
+                    ];
+                    localStorage.setItem(STORAGE_DISCUSS, JSON.stringify(msgs));
+                }
+
+                // 提现申请
+                if (!localStorage.getItem(STORAGE_WITHDRAWALS)) {
+                    localStorage.setItem(STORAGE_WITHDRAWALS, JSON.stringify([]));
+                }
+
+                // 通知（用户通知，用于退回/提现提醒）
+                if (!localStorage.getItem(STORAGE_NOTIFICATIONS)) {
+                    localStorage.setItem(STORAGE_NOTIFICATIONS, JSON.stringify([]));
+                }
+            }
+            initData();
+
+            // ---------- 全局变量 ----------
+            let currentUser = null;
+            let activeSection = 'dashboard';
+
+            // 辅助函数
+            function getUsers() { return JSON.parse(localStorage.getItem(STORAGE_USERS)) || []; }
+            function saveUsers(users) { localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); }
+            function getPosts() { return JSON.parse(localStorage.getItem(STORAGE_POSTS)) || []; }
+            function savePosts(posts) { localStorage.setItem(STORAGE_POSTS, JSON.stringify(posts)); }
+            function getProgress() { return JSON.parse(localStorage.getItem(STORAGE_PROGRESS)) || []; }
+            function saveProgress(prog) { localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(prog)); }
+            function getRoyalties() { return JSON.parse(localStorage.getItem(STORAGE_ROYALTIES)) || []; }
+            function saveRoyalties(r) { localStorage.setItem(STORAGE_ROYALTIES, JSON.stringify(r)); }
+            function getNotices() { return JSON.parse(localStorage.getItem(STORAGE_NOTICES)) || []; }
+            function saveNotices(n) { localStorage.setItem(STORAGE_NOTICES, JSON.stringify(n)); }
+            function getDiscuss() { return JSON.parse(localStorage.getItem(STORAGE_DISCUSS)) || []; }
+            function saveDiscuss(d) { localStorage.setItem(STORAGE_DISCUSS, JSON.stringify(d)); }
+            function getGroups() { return JSON.parse(localStorage.getItem(STORAGE_GROUPS)) || []; }
+            function saveGroups(g) { localStorage.setItem(STORAGE_GROUPS, JSON.stringify(g)); }
+            function getWithdrawals() { return JSON.parse(localStorage.getItem(STORAGE_WITHDRAWALS)) || []; }
+            function saveWithdrawals(w) { localStorage.setItem(STORAGE_WITHDRAWALS, JSON.stringify(w)); }
+            function getNotifications() { return JSON.parse(localStorage.getItem(STORAGE_NOTIFICATIONS)) || []; }
+            function saveNotifications(n) { localStorage.setItem(STORAGE_NOTIFICATIONS, JSON.stringify(n)); }
+
+            // 权限判断
+            function isBoss() { return currentUser && currentUser.role === 'boss'; }
+            function isAdmin() { return currentUser && currentUser.role === 'admin'; }      // 高级管理员
+            function isManager() { return currentUser && currentUser.role === 'manager'; }  // 普通管理员
+            function isMember() { return currentUser && currentUser.role === 'member'; }
+            function isAdminOrBoss() { return isAdmin() || isBoss(); }
+            function isManagerOrAbove() { return isManager() || isAdminOrBoss(); }
+            function canViewAllGroups() { return isManagerOrAbove(); }
+            function canManageAllGroups() { return isAdminOrBoss(); }  // 高级管理员和老板可跨组
+            function canPromote() { return isBoss(); }                 // 只有老板可以提拔/降级
+            function canAccessSettings() { return isBoss(); }          // 只有老板访问设置
+            function canManageGroups() { return isBoss(); }            // 只有老板增删组别
+            function canApproveWithdrawals() { return isAdminOrBoss(); } // 高级管理员和老板可审核提现
+
+            // 刷新当前视图
+            function refreshCurrentSection() { renderSection(activeSection); }
+
+            // 添加通知（用户通知）
+            function addNotification(targetUser, message) {
+                const notifs = getNotifications();
+                notifs.push({
+                    id: Date.now(),
+                    targetUser,
+                    message,
+                    time: new Date().toLocaleString(),
+                    read: false
+                });
+                saveNotifications(notifs);
+            }
+
+            // 渲染应用主界面
+            function renderApp() {
+                const sidebar = document.getElementById('sidebar');
+                const roleMap = { boss: '老板', admin: '高级管理员', manager: '普通管理员', member: '成员' };
+                const roleClassMap = { boss: 'role-boss', admin: 'role-admin', manager: 'role-manager', member: 'role-member' };
+
+                sidebar.innerHTML = `
+                    <h4 class="text-center mb-4 text-light">📚 万联网文</h4>
+                    <div class="mb-3 text-white-50 small">欢迎，<strong>${currentUser.nickname}</strong> 
+                        <span class="badge ${roleClassMap[currentUser.role]}">${roleMap[currentUser.role]}</span>
+                    </div>
+                    <nav>
+                        <a href="#" class="nav-link ${activeSection === 'dashboard' ? 'active' : ''}" data-section="dashboard"><i class="bi bi-speedometer2"></i> 仪表盘</a>
+                        <a href="#" class="nav-link ${activeSection === 'posts' ? 'active' : ''}" data-section="posts"><i class="bi bi-pencil-square"></i> 投稿管理</a>
+                        <a href="#" class="nav-link ${activeSection === 'groupPanel' ? 'active' : ''}" data-section="groupPanel"><i class="bi bi-people"></i> 我的组 (${currentUser.group})</a>
+                        <a href="#" class="nav-link ${activeSection === 'discuss' ? 'active' : ''}" data-section="discuss"><i class="bi bi-chat-dots"></i> 组内交流区</a>
+                        <a href="#" class="nav-link ${activeSection === 'progress' ? 'active' : ''}" data-section="progress"><i class="bi bi-bar-chart"></i> 考核进度</a>
+                        <a href="#" class="nav-link ${activeSection === 'royalty' ? 'active' : ''}" data-section="royalty"><i class="bi bi-cash-stack"></i> 稿费/提取</a>
+                        <a href="#" class="nav-link ${activeSection === 'members' ? 'active' : ''}" data-section="members"><i class="bi bi-person-lines-fill"></i> 人员名单</a>
+                        <a href="#" class="nav-link ${activeSection === 'notices' ? 'active' : ''}" data-section="notices"><i class="bi bi-megaphone"></i> 通知公告</a>
+                        ${canAccessSettings() ? '<a href="#" class="nav-link '+(activeSection === 'settings' ? 'active' : '')+'" data-section="settings"><i class="bi bi-gear"></i> 设置管理</a>' : ''}
+                        <hr class="bg-secondary">
+                        <a href="#" id="logoutBtnSide"><i class="bi bi-box-arrow-right"></i> 退出</a>
+                    </nav>
+                `;
+
+                sidebar.querySelectorAll('nav a[data-section]').forEach(a => {
+                    a.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const section = a.dataset.section;
+                        activeSection = section;
+                        sidebar.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+                        a.classList.add('active');
+                        renderSection(section);
+                    });
+                });
+
+                document.getElementById('logoutBtnSide').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentUser = null;
+                    document.getElementById('loginContainer').classList.remove('hidden');
+                    document.getElementById('appContainer').classList.add('hidden');
+                });
+
+                renderSection(activeSection);
+            }
+
+            function renderSection(section) {
+                const main = document.getElementById('mainContent');
+                activeSection = section;
+                switch(section) {
+                    case 'dashboard': renderDashboard(main); break;
+                    case 'posts': renderPosts(main); break;
+                    case 'groupPanel': renderGroupPanel(main); break;
+                    case 'discuss': renderDiscuss(main); break;
+                    case 'progress': renderProgress(main); break;
+                    case 'royalty': renderRoyalty(main); break;
+                    case 'members': renderMembers(main); break;
+                    case 'notices': renderNotices(main); break;
+                    case 'settings': renderSettings(main); break;
+                    default: renderDashboard(main);
+                }
+            }
+
+            // ---------- 仪表盘（集成通知区域）----------
+            function renderDashboard(container) {
+                const posts = getPosts();
+                const users = getUsers();
+                const royalties = getRoyalties();
+                const withdrawals = getWithdrawals();
+                const totalPosts = posts.length;
+                const totalWords = posts.reduce((acc, p) => acc + p.words, 0);
+                const pendingRoyalties = royalties.filter(r => r.status !== '已发').length;
+                const pendingWithdrawals = withdrawals.filter(w => w.status === '待处理').length;
+
+                // 当前用户未读通知
+                const userNotifs = getNotifications().filter(n => n.targetUser === currentUser.nickname && !n.read);
+
+                let notifHtml = '';
+                if (userNotifs.length > 0) {
+                    notifHtml = `
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="bi bi-bell"></i> 您有 <strong>${userNotifs.length}</strong> 条未读通知
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <div class="mt-2 notification-list">
+                                ${userNotifs.map(n => `
+                                    <div class="border-bottom pb-1 mb-1">
+                                        <i class="bi bi-envelope"></i> ${n.message} <small class="text-muted">${n.time}</small>
+                                        <button class="btn btn-sm btn-outline-primary mark-read float-end" data-id="${n.id}">标为已读</button>
+                                    </div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="bi bi-shield-check"></i> 安全防护已启用
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    ${notifHtml}
+                    <div class="row">
+                        <div class="col-12"><h2>📋 仪表盘</h2><p class="text-secondary">本周总体进度 | 稿费待处理: ${pendingRoyalties}笔 | 提现待审核: ${pendingWithdrawals}</p></div>
+                        <div class="col-md-3"><div class="card text-white bg-primary"><div class="card-body"><h5 class="card-title">总投稿</h5><p class="display-6">${totalPosts}</p></div></div></div>
+                        <div class="col-md-3"><div class="card text-white bg-success"><div class="card-body"><h5 class="card-title">完成字数 (万)</h5><p class="display-6">${(totalWords/10000).toFixed(1)}</p></div></div></div>
+                        <div class="col-md-3"><div class="card text-white bg-warning"><div class="card-body"><h5 class="card-title">待发稿费</h5><p class="display-6">¥${royalties.filter(r => r.status!=='已发').reduce((s,r)=>s+r.amount,0)}</p></div></div></div>
+                        <div class="col-md-3"><div class="card text-white bg-danger"><div class="card-body"><h5 class="card-title">成员总数</h5><p class="display-6">${users.length}</p></div></div></div>
+                    </div>
+                `;
+
+                // 标记已读事件
+                container.querySelectorAll('.mark-read').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = btn.dataset.id;
+                        let notifs = getNotifications();
+                        const idx = notifs.findIndex(n => n.id == id);
+                        if (idx !== -1) notifs[idx].read = true;
+                        saveNotifications(notifs);
+                        refreshCurrentSection();
+                    });
+                });
+            }
+
+            // ---------- 投稿管理（作家平台风格）----------
+            function renderPosts(container) {
+                const posts = getPosts();
+                const canViewAll = canViewAllGroups();
+                let filteredPosts = canViewAll ? posts : posts.filter(p => p.group === currentUser.group || (currentUser.extraGroups || []).includes(p.group));
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-white fw-bold d-flex justify-content-between">
+                            <span>📝 ${canViewAll ? '全部投稿' : '本组投稿'}</span>
+                            <span class="badge bg-secondary">${canViewAll ? '所有组' : currentUser.group}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead><tr><th>组别</th><th>标题</th><th>作者</th><th>投稿时间</th><th>字数</th><th>操作</th></tr></thead>
+                                    <tbody>
+                                        ${filteredPosts.map(p => `<tr><td>${p.group}</td><td>${p.title}</td><td>${p.author}</td><td>${p.time}</td><td>${p.words}</td><td><i class="bi bi-eye btn btn-sm btn-outline-secondary view-post" data-id="${p.id}"></i> 审阅</td></tr>`).join('')}
+                                        ${filteredPosts.length === 0 ? '<tr><td colspan="6" class="text-center text-muted">暂无投稿</td></tr>' : ''}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" id="newPostBtn">+ 新投稿</button>
+                        </div>
+                    </div>
+                `;
+
+                // 新投稿按钮：打开自定义模态框
+                document.getElementById('newPostBtn')?.addEventListener('click', () => {
+                    const groupSelect = document.getElementById('postGroup');
+                    const groups = getGroups();
+                    groupSelect.innerHTML = '';
+                    groups.forEach(g => {
+                        const option = document.createElement('option');
+                        option.value = g;
+                        option.textContent = g;
+                        if (currentUser && g === currentUser.group) option.selected = true;
+                        groupSelect.appendChild(option);
+                    });
+                    document.getElementById('postTitle').value = '';
+                    document.getElementById('postDescription').value = '';
+                    document.getElementById('postContent').value = '';
+                    document.getElementById('postTags').value = '';
+                    document.getElementById('wordCount').innerText = '0';
+                    new bootstrap.Modal(document.getElementById('writerPostModal')).show();
+                });
+
+                // 审阅按钮
+                container.querySelectorAll('.view-post').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const postId = btn.dataset.id;
+                        const post = getPosts().find(p => p.id == postId);
+                        if (!post) return;
+                        // 填充模态框
+                        document.getElementById('modalPostInfo').innerHTML = `<h6>${post.title}  by ${post.author} (${post.group}) 字数:${post.words}</h6>`;
+                        document.getElementById('modalContent').innerText = post.content || '（无文案内容）';
+                        const reviewsDiv = document.getElementById('modalReviews');
+                        reviewsDiv.innerHTML = '';
+                        if (post.reviews && post.reviews.length) {
+                            post.reviews.forEach(r => {
+                                const badge = r.action === '通过' ? 'bg-success' : (r.action === '退回' ? 'bg-danger' : 'bg-secondary');
+                                reviewsDiv.innerHTML += `<div class="border p-2 mb-2"><span class="badge ${badge}">${r.action}</span> <strong>${r.reviewer}</strong>: ${r.comment} <small class="text-muted">${r.time}</small></div>`;
+                            });
+                        } else {
+                            reviewsDiv.innerHTML = '<p class="text-muted">暂无批复</p>';
+                        }
+                        document.getElementById('reviewInputArea').style.display = isManagerOrAbove() ? 'block' : 'none';
+                        document.getElementById('reviewModal').dataset.postId = postId;
+                        new bootstrap.Modal(document.getElementById('reviewModal')).show();
+                    });
+                });
+            }
+
+            // 提交投稿
+            document.getElementById('submitPostBtn')?.addEventListener('click', () => {
+                const title = document.getElementById('postTitle').value.trim();
+                const content = document.getElementById('postContent').value.trim();
+                const group = document.getElementById('postGroup').value;
+                const description = document.getElementById('postDescription').value.trim();
+                const tags = document.getElementById('postTags').value.split(',').map(s => s.trim()).filter(s => s);
+                if (!title || !content) { alert('标题和正文不能为空'); return; }
+                const words = content.replace(/[^\u4e00-\u9fa5]/g, '').length;
+                if (words === 0) { alert('正文中至少需要包含中文字符'); return; }
+
+                const posts = getPosts();
+                const newPost = {
+                    id: Date.now(),
+                    group, title, author: currentUser.nickname,
+                    time: new Date().toISOString().slice(0,10),
+                    words, content, description, tags,
+                    reviews: []
+                };
+                posts.push(newPost);
+                savePosts(posts);
+
+                // 更新进度
+                const progress = getProgress();
+                const progItem = progress.find(p => p.group === group);
+                if (progItem) {
+                    progItem.weekWords += words;
+                    saveProgress(progress);
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('writerPostModal')).hide();
+                refreshCurrentSection();
+            });
+
+            // 审阅批复
+            function addReview(action) {
+                const modalEl = document.getElementById('reviewModal');
+                const postId = modalEl.dataset.postId;
+                if (!postId) return;
+                const comment = document.getElementById('reviewComment').value.trim();
+                if (!comment && action !== '评论') { alert('请填写批复内容'); return; }
+                const posts = getPosts();
+                const post = posts.find(p => p.id == postId);
+                if (!post) return;
+                if (!post.reviews) post.reviews = [];
+                post.reviews.push({
+                    reviewer: currentUser.nickname,
+                    action: action,
+                    comment: comment || '（无内容）',
+                    time: new Date().toLocaleString()
+                });
+                savePosts(posts);
+
+                if (action === '退回') {
+                    addNotification(post.author, `您的稿件《${post.title}》被退回。批复：${comment || '无'}`);
+                }
+                bootstrap.Modal.getInstance(modalEl).hide();
+                refreshCurrentSection();
+            }
+            document.getElementById('submitReviewApprove')?.addEventListener('click', () => addReview('通过'));
+            document.getElementById('submitReviewReject')?.addEventListener('click', () => addReview('退回'));
+            document.getElementById('submitReviewComment')?.addEventListener('click', () => addReview('评论'));
+
+            // 我的组 (简略)
+            function renderGroupPanel(container) {
+                const posts = getPosts().filter(p => p.group === currentUser.group);
+                container.innerHTML = `
+                    <div class="card"><div class="card-header bg-white fw-bold">🧘 ${currentUser.group} · 本组投稿</div>
+                    <div class="card-body"><ul class="list-group">${posts.map(p => `<li class="list-group-item d-flex justify-content-between">${p.title} 作者: ${p.author} <span>${p.words}字</span></li>`).join('')}${posts.length === 0 ? '<li class="list-group-item text-center text-muted">暂无本组投稿</li>' : ''}</ul></div></div>
+                `;
+            }
+
+            // 交流区
+            function renderDiscuss(container) {
+                const group = currentUser.group;
+                let msgs = getDiscuss().filter(m => m.group === group);
+                container.innerHTML = `
+                    <div class="card"><div class="card-header bg-white fw-bold">💬 ${group} · 交流区</div>
+                    <div class="card-body discuss-messages" id="discussMsgContainer">${msgs.map(m => `<div class="msg-item" data-msg-time="${m.time}"><strong>${m.user}:</strong> ${m.message} <small class="text-muted float-end">${m.time}</small></div>`).join('')}${msgs.length === 0 ? '<div class="text-muted">暂无消息</div>' : ''}</div>
+                    <div class="card-footer bg-white d-flex gap-2"><input type="text" id="discussInput" class="form-control form-control-sm" placeholder="发言..."><button class="btn btn-sm btn-primary" id="sendDiscussBtn">发送</button></div></div>
+                `;
+                document.getElementById('sendDiscussBtn')?.addEventListener('click', () => {
+                    const text = document.getElementById('discussInput').value.trim();
+                    if (!text) return;
+                    const discuss = getDiscuss();
+                    discuss.push({ group: currentUser.group, user: currentUser.nickname, message: text, time: new Date().toLocaleString() });
+                    saveDiscuss(discuss);
+                    refreshCurrentSection();
+                });
+            }
+
+            // 考核进度
+            function renderProgress(container) {
+                let progress = getProgress();
+                const canViewAll = canViewAllGroups();
+                let filtered = canViewAll ? progress : progress.filter(p => p.group === currentUser.group);
+                container.innerHTML = `
+                    <div class="card"><div class="card-header bg-white fw-bold">📊 考核进度 · 本周 (目标28000字/组) ${canViewAll ? '<span class="badge bg-info">管理员可编辑</span>' : ''}</div>
+                    <div class="card-body"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>组别</th><th>大纲完成</th><th>本周已写字数</th><th>目标</th><th>进度</th>${canViewAll ? '<th>操作</th>' : ''}</tr></thead><tbody>
+                        ${filtered.map(p => {
+                            const percent = Math.min(100, Math.round(p.weekWords/p.target*100));
+                            return `<tr><td>${p.group}</td><td>${p.outlineDone ? '✅' : '⏳'}</td><td>${p.weekWords}</td><td>${p.target}</td><td><div class="progress"><div class="progress-bar" style="width:${percent}%">${percent}%</div></div></td>${canViewAll ? `<td><button class="btn btn-sm btn-outline-secondary edit-progress" data-group="${p.group}">编辑</button></td>` : ''}</tr>`;
+                        }).join('')}
+                    </tbody></table></div></div></div>
+                `;
+                if (canViewAll) {
+                    container.querySelectorAll('.edit-progress').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const group = btn.dataset.group;
+                            let prog = getProgress();
+                            let item = prog.find(p => p.group === group);
+                            if (!item) return;
+                            const newWords = prompt('修改本周字数', item.weekWords);
+                            if (newWords && !isNaN(newWords)) item.weekWords = parseInt(newWords);
+                            const outline = confirm('大纲已完成？点击确定代表✅，取消代表⏳');
+                            item.outlineDone = outline;
+                            saveProgress(prog);
+                            refreshCurrentSection();
+                        });
+                    });
+                }
+            }
+
+            // 稿费/提取（增强：提现申请带账号，月度流水统计）
+            function renderRoyalty(container) {
+                const royalties = getRoyalties();
+                const withdrawals = getWithdrawals();
+                const userRoyalties = royalties.filter(r => isManagerOrAbove() ? true : r.user === currentUser.nickname);
+                // 计算月度流水（当前月）
+                const now = new Date();
+                const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                const monthlyWithdrawals = withdrawals.filter(w => w.status === '已通过' && w.time.startsWith(currentMonth));
+                const totalMonthly = monthlyWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+
+                container.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold d-flex justify-content-between">
+                                    <span>💰 稿费记录</span>
+                                    ${isManagerOrAbove() ? '<button class="btn btn-sm btn-primary" id="newRoyaltyBtn">+ 发放新稿费</button>' : ''}
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group" id="royaltyList">
+                                        ${userRoyalties.map(r => `
+                                            <li class="list-group-item d-flex justify-content-between align-items-center" data-id="${r.id}">
+                                                <span><strong>${r.user}</strong> · ${r.group}  ¥${r.amount}</span>
+                                                <span class="badge ${r.status === '已发' ? 'bg-success' : (r.status==='待确认'?'bg-warning':'bg-secondary')}">${r.status}</span>
+                                                <span class="btn-group btn-group-sm">
+                                                    ${isManagerOrAbove() ? '<button class="btn btn-outline-success btn-sm edit-status" data-id="'+r.id+'">改状态</button>' : ''}
+                                                    ${isManagerOrAbove() ? '<button class="btn btn-outline-danger btn-sm delete-royalty" data-id="'+r.id+'">删除</button>' : ''}
+                                                </span>
+                                            </li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-white fw-bold">💳 提现申请</div>
+                                <div class="card-body">
+                                    <p>月度流水（已通过）：<strong>¥ ${totalMonthly}</strong> (${currentMonth})</p>
+                                    <button class="btn btn-sm btn-success" id="newWithdrawBtn">申请提现</button>
+                                    <hr>
+                                    <h6>历史提现记录</h6>
+                                    <ul class="list-group" style="max-height:200px; overflow-y:auto">
+                                        ${withdrawals.filter(w => w.user === currentUser.nickname || isManagerOrAbove()).map(w => `
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>${w.user} ¥${w.amount} (${w.method}: ${w.account})</span>
+                                                <span class="badge ${w.status === '已通过' ? 'bg-success' : (w.status==='已拒绝'?'bg-danger':'bg-warning')}">${w.status}</span>
+                                                ${canApproveWithdrawals() && w.status === '待处理' ? `
+                                                    <span>
+                                                        <button class="btn btn-sm btn-success approve-withdraw" data-id="${w.id}">通过</button>
+                                                        <button class="btn btn-sm btn-danger reject-withdraw" data-id="${w.id}">拒绝</button>
+                                                    </span>` : ''}
+                                            </li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('newRoyaltyBtn')?.addEventListener('click', () => {
+                    const user = prompt('输入成员笔名', currentUser.nickname);
+                    if (!user) return;
+                    const amount = parseFloat(prompt('金额', '500'));
+                    if (amount <= 0) return;
+                    const group = prompt('组别', currentUser.group) || currentUser.group;
+                    const royalties = getRoyalties();
+                    royalties.push({ id: Date.now(), user, group, amount, status: '待确认' });
+                    saveRoyalties(royalties);
+                    refreshCurrentSection();
+                });
+
+                document.getElementById('newWithdrawBtn')?.addEventListener('click', () => {
+                    // 显示提现模态框
+                    new bootstrap.Modal(document.getElementById('withdrawModal')).show();
+                });
+
+                // 提交提现申请
+                document.getElementById('submitWithdrawBtn')?.addEventListener('click', () => {
+                    const amount = parseFloat(document.getElementById('withdrawAmount').value);
+                    const method = document.getElementById('withdrawMethod').value;
+                    const account = document.getElementById('withdrawAccount').value.trim();
+                    const note = document.getElementById('withdrawNote').value.trim();
+                    if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
+                    if (!account) { alert('请输入收款账号'); return; }
+                    const withdrawals = getWithdrawals();
+                    const newW = {
+                        id: Date.now(),
+                        user: currentUser.nickname,
+                        amount,
+                        method,
+                        account,
+                        note,
+                        time: new Date().toLocaleString(),
+                        status: '待处理'
+                    };
+                    withdrawals.push(newW);
+                    saveWithdrawals(withdrawals);
+                    // 通知老板和高级管理员
+                    const users = getUsers();
+                    users.filter(u => u.role === 'boss' || u.role === 'admin').forEach(admin => {
+                        addNotification(admin.nickname, `用户 ${currentUser.nickname} 提交了 ¥${amount} 的提现申请。`);
+                    });
+                    bootstrap.Modal.getInstance(document.getElementById('withdrawModal')).hide();
+                    refreshCurrentSection();
+                });
+
+                // 审核提现
+                container.querySelectorAll('.approve-withdraw').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.id;
+                        let ws = getWithdrawals();
+                        const w = ws.find(w => w.id == id);
+                        if (w) w.status = '已通过';
+                        saveWithdrawals(ws);
+                        addNotification(w.user, `您的提现申请 ¥${w.amount} 已通过审核。`);
+                        refreshCurrentSection();
+                    });
+                });
+                container.querySelectorAll('.reject-withdraw').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.id;
+                        let ws = getWithdrawals();
+                        const w = ws.find(w => w.id == id);
+                        if (w) w.status = '已拒绝';
+                        saveWithdrawals(ws);
+                        addNotification(w.user, `您的提现申请 ¥${w.amount} 已被拒绝。`);
+                        refreshCurrentSection();
+                    });
+                });
+
+                // 稿费状态修改/删除
+                container.querySelectorAll('.edit-status').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = btn.dataset.id;
+                        let rs = getRoyalties();
+                        const r = rs.find(r => r.id == id);
+                        if (!r) return;
+                        const newStatus = prompt('输入新状态：已发 / 待确认 / 提取中', r.status);
+                        if (newStatus && ['已发', '待确认', '提取中'].includes(newStatus)) {
+                            r.status = newStatus;
+                            saveRoyalties(rs);
+                            refreshCurrentSection();
+                        }
+                    });
+                });
+                container.querySelectorAll('.delete-royalty').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = btn.dataset.id;
+                        if (!confirm('确定删除？')) return;
+                        let rs = getRoyalties();
+                        rs = rs.filter(r => r.id != id);
+                        saveRoyalties(rs);
+                        refreshCurrentSection();
+                    });
+                });
+            }
+
+            // 人员名单（增强：老板可设置管理员）
+            function renderMembers(container) {
+                const users = getUsers();
+                const groups = getGroups();
+                const canManage = isManagerOrAbove();
+                const canManageAll = canManageAllGroups();
+                const isBossUser = isBoss();
+
+                let tabsHtml = '<ul class="nav nav-tabs" id="groupTabs">';
+                groups.forEach((g, idx) => {
+                    tabsHtml += `<li class="nav-item"><button class="nav-link ${idx===0?'active':''}" data-bs-toggle="tab" data-bs-target="#group${idx}">${g}</button></li>`;
+                });
+                tabsHtml += '</ul><div class="tab-content mt-3">';
+
+                groups.forEach((g, idx) => {
+                    const membersInGroup = users.filter(u => u.group === g);
+                    tabsHtml += `<div class="tab-pane fade ${idx===0?'show active':''}" id="group${idx}">`;
+                    tabsHtml += `<table class="table table-sm align-middle"><thead><tr><th>姓名</th><th>账号</th><th>主组别</th><th>兼任组</th><th>角色</th>${canManage ? '<th>操作</th>' : ''}</tr></thead><tbody>`;
+
+                    membersInGroup.forEach(u => {
+                        const roleMap = { boss: '老板', admin: '高级管理员', manager: '普通管理员', member: '成员' };
+                        const roleClassMap = { boss: 'role-boss', admin: 'role-admin', manager: 'role-manager', member: 'role-member' };
+                        const extraGroups = u.extraGroups ? u.extraGroups.join(', ') : '';
+
+                        tabsHtml += `<tr>
+                            <td>${u.nickname}</td>
+                            <td>${u.account}</td>
+                            <td><span class="badge bg-primary">${u.group}</span></td>
+                            <td>${extraGroups}</td>
+                            <td><span class="badge ${roleClassMap[u.role]}">${roleMap[u.role]}</span></td>`;
+
+                        if (canManage && u.account !== currentUser.account) {
+                            tabsHtml += `<td>`;
+                            if ((canManageAll) || (currentUser.role === 'manager' && u.group === currentUser.group)) {
+                                tabsHtml += `<button class="btn btn-outline-secondary btn-permission change-group" data-account="${u.account}">换组</button>
+                                             <button class="btn btn-outline-info btn-permission add-group" data-account="${u.account}">加组</button>`;
+                            }
+                            if (isBossUser) {
+                                // 老板可以设置角色：成员 -> 普通管理员，普通管理员 -> 高级管理员，高级管理员 -> 成员等
+                                if (u.role === 'member') {
+                                    tabsHtml += `<button class="btn btn-outline-warning btn-permission set-manager" data-account="${u.account}">设为普通管理员</button>`;
+                                } else if (u.role === 'manager') {
+                                    tabsHtml += `<button class="btn btn-outline-primary btn-permission set-admin" data-account="${u.account}">设为高级管理员</button>`;
+                                    tabsHtml += `<button class="btn btn-outline-danger btn-permission demote-member" data-account="${u.account}">降为成员</button>`;
+                                } else if (u.role === 'admin') {
+                                    tabsHtml += `<button class="btn btn-outline-danger btn-permission demote-manager" data-account="${u.account}">降为普通管理员</button>`;
+                                    tabsHtml += `<button class="btn btn-outline-secondary btn-permission demote-member" data-account="${u.account}">降为成员</button>`;
+                                }
+                            }
+                            tabsHtml += `</td>`;
+                        } else if (canManage && u.account === currentUser.account) {
+                            tabsHtml += '<td><span class="text-muted">自己</span></td>';
+                        } else {
+                            tabsHtml += '<td></td>';
+                        }
+                        tabsHtml += `</tr>`;
+                    });
+
+                    tabsHtml += membersInGroup.length===0 ? '<tr><td colspan="6" class="text-center text-muted">该组暂无成员</td></tr>' : '';
+                    tabsHtml += '</tbody></table></div>';
+                });
+                tabsHtml += '</div>';
+                tabsHtml += `<div class="mt-2">${canManage ? '<button class="btn btn-sm btn-success" id="addMemberBtn">+ 新增成员</button>' : ''}</div>`;
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-white fw-bold d-flex justify-content-between">
+                            <span><i class="bi bi-people"></i> 人员名单 · 共${groups.length}组</span>
+                        </div>
+                        <div class="card-body">
+                            ${tabsHtml}
+                            <p class="text-muted small mt-2"><i class="bi bi-info-circle"></i> 换组/加组: 管理员可操作本组，高级管理员和老板可跨组。角色设置仅老板可用。</p>
+                        </div>
+                    </div>
+                `;
+
+                container.addEventListener('click', (e) => {
+                    const target = e.target.closest('button');
+                    if (!target) return;
+                    const account = target.dataset.account;
+                    if (!account) return;
+                    const users = getUsers();
+                    const user = users.find(u => u.account === account);
+                    if (!user) return;
+
+                    if (target.classList.contains('change-group')) {
+                        const newGroup = prompt('输入新主组', user.group);
+                        if (newGroup && groups.includes(newGroup)) {
+                            user.group = newGroup;
+                            saveUsers(users);
+                            refreshCurrentSection();
+                        } else alert('无效组名');
+                    }
+                    else if (target.classList.contains('add-group')) {
+                        const extra = prompt('输入兼任组', '');
+                        if (extra && groups.includes(extra) && extra !== user.group && !user.extraGroups.includes(extra)) {
+                            user.extraGroups.push(extra);
+                            saveUsers(users);
+                            refreshCurrentSection();
+                        } else alert('无效或已存在');
+                    }
+                    else if (target.classList.contains('set-manager')) {
+                        user.role = 'manager'; saveUsers(users); refreshCurrentSection();
+                    }
+                    else if (target.classList.contains('set-admin')) {
+                        user.role = 'admin'; saveUsers(users); refreshCurrentSection();
+                    }
+                    else if (target.classList.contains('demote-member')) {
+                        user.role = 'member'; saveUsers(users); refreshCurrentSection();
+                    }
+                    else if (target.classList.contains('demote-manager')) {
+                        user.role = 'manager'; saveUsers(users); refreshCurrentSection();
+                    }
+                });
+
+                document.getElementById('addMemberBtn')?.addEventListener('click', () => {
+                    const account = prompt('账号(纯英文)');
+                    if (!account || !/^[A-Za-z]+$/.test(account)) { alert('账号需纯英文'); return; }
+                    const pwd = prompt('密码(数字+英文)');
+                    if (!pwd || !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$/.test(pwd)) { alert('密码需包含字母和数字'); return; }
+                    const nickname = prompt('笔名');
+                    if (!nickname) return;
+                    let group = prompt('主组别', currentUser.group);
+                    if (!group || !groups.includes(group)) { alert('组别无效'); return; }
+                    const users = getUsers();
+                    if (users.some(u => u.account === account)) { alert('账号已存在'); return; }
+                    users.push({ account, password: pwd, nickname, role: 'member', group, extraGroups: [] });
+                    saveUsers(users);
+                    refreshCurrentSection();
+                });
+            }
+
+            // 通知公告
+            function renderNotices(container) {
+                const notices = getNotices();
+                const canPublish = isManagerOrAbove();
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-white fw-bold d-flex justify-content-between">
+                            <span><i class="bi bi-megaphone"></i> 通知公告</span>
+                            <span class="badge bg-warning">发布权限: 管理员及以上</span>
+                        </div>
+                        <div class="card-body" id="noticeList">
+                            ${notices.map(n => `
+                                <div class="alert alert-secondary d-flex justify-content-between align-items-center" data-id="${n.id}">
+                                    <span>📢 ${n.title} (${n.publisher} 发布 ${n.time})</span>
+                                    <span>
+                                        ${n.top ? '<span class="badge bg-info me-2">置顶</span>' : ''}
+                                        ${(isAdminOrBoss() || n.publisher === currentUser.nickname) ? '<button class="btn btn-sm btn-outline-danger delete-notice" data-id="'+n.id+'">删除</button>' : ''}
+                                    </span>
+                                </div>`).join('')}
+                            ${notices.length === 0 ? '<div class="text-center text-muted">暂无公告</div>' : ''}
+                            ${canPublish ? '<button class="btn btn-sm btn-danger mt-2" id="publishNoticeBtn">发布新通知</button>' : ''}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('publishNoticeBtn')?.addEventListener('click', () => {
+                    const title = prompt('通知标题');
+                    if (!title) return;
+                    const top = confirm('是否置顶？');
+                    const notices = getNotices();
+                    notices.push({ id: Date.now(), title, publisher: currentUser.nickname, role: currentUser.role, time: new Date().toISOString().slice(0,10), top });
+                    saveNotices(notices);
+                    refreshCurrentSection();
+                });
+                container.querySelectorAll('.delete-notice').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = btn.dataset.id;
+                        let notices = getNotices().filter(n => n.id != id);
+                        saveNotices(notices);
+                        refreshCurrentSection();
+                    });
+                });
+            }
+
+            // 设置管理（仅老板，增加组别）
+            function renderSettings(container) {
+                if (!canAccessSettings()) {
+                    container.innerHTML = '<div class="alert alert-danger">无权访问</div>';
+                    return;
+                }
+                const groups = getGroups();
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header bg-white fw-bold">⚙️ 设置管理 · 仅老板可见</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4"><h6>每周目标字数</h6><input id="globalTarget" class="form-control" value="28000"></div>
+                                <div class="col-md-4"><h6>安全选项</h6><div class="form-check"><input class="form-check-input" type="checkbox" checked> 启用CSRF</div></div>
+                                <div class="col-md-4"><h6>组别管理</h6>
+                                    <p>当前组别：${groups.join('、')}</p>
+                                    <button class="btn btn-outline-primary btn-sm" id="addGroupBtn">新增组别</button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="backupBtn">备份数据</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mt-2" id="saveGlobalTarget">保存目标</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('saveGlobalTarget')?.addEventListener('click', () => {
+                    const newTarget = parseInt(document.getElementById('globalTarget').value, 10);
+                    if (newTarget > 0) {
+                        let prog = getProgress();
+                        prog.forEach(p => p.target = newTarget);
+                        saveProgress(prog);
+                        alert('全局目标已更新');
+                        refreshCurrentSection();
+                    }
+                });
+                document.getElementById('backupBtn')?.addEventListener('click', () => {
+                    const data = {
+                        users: getUsers(),
+                        posts: getPosts(),
+                        progress: getProgress(),
+                        royalties: getRoyalties(),
+                        notices: getNotices(),
+                        discuss: getDiscuss(),
+                        groups: getGroups(),
+                        withdrawals: getWithdrawals(),
+                        notifications: getNotifications()
+                    };
+                    localStorage.setItem('backup_' + Date.now(), JSON.stringify(data));
+                    alert('数据备份已保存到localStorage');
+                });
+                document.getElementById('addGroupBtn')?.addEventListener('click', () => {
+                    new bootstrap.Modal(document.getElementById('addGroupModal')).show();
+                });
+            }
+
+            // 添加组别提交
+            document.getElementById('submitAddGroup')?.addEventListener('click', () => {
+                const newGroup = document.getElementById('newGroupName').value.trim();
+                if (!newGroup) return;
+                const groups = getGroups();
+                if (groups.includes(newGroup)) { alert('组别已存在'); return; }
+                groups.push(newGroup);
+                saveGroups(groups);
+                // 同步进度表
+                let prog = getProgress();
+                if (!prog.some(p => p.group === newGroup)) {
+                    prog.push({ group: newGroup, outlineDone: false, weekWords: 0, target: 28000 });
+                    saveProgress(prog);
+                }
+                bootstrap.Modal.getInstance(document.getElementById('addGroupModal')).hide();
+                document.getElementById('newGroupName').value = '';
+                refreshCurrentSection();
+            });
+
+            // ---------- 登录/注册 ----------
+            const loginContainer = document.getElementById('loginContainer');
+            const appContainer = document.getElementById('appContainer');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const regMessage = document.getElementById('regMessage');
+
+            // 填充注册组别
+            function fillRegGroup() {
+                const select = document.getElementById('regGroup');
+                const groups = getGroups();
+                select.innerHTML = '';
+                groups.filter(g => !g.includes('管理组')).forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g;
+                    opt.textContent = g;
+                    select.appendChild(opt);
+                });
+            }
+            fillRegGroup();
+
+            loginBtn.addEventListener('click', () => {
+                const account = document.getElementById('loginAccount').value.trim();
+                const pwd = document.getElementById('loginPassword').value.trim();
+                const users = getUsers();
+                const user = users.find(u => u.account === account && u.password === pwd);
+                if (user) {
+                    currentUser = user;
+                    loginContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    renderApp();
+                } else {
+                    alert('账号或密码错误');
+                }
+            });
+
+            registerBtn.addEventListener('click', () => {
+                const nickname = document.getElementById('regNickname').value.trim();
+                const account = document.getElementById('regAccount').value.trim();
+                const pwd = document.getElementById('regPassword').value.trim();
+                const confirm = document.getElementById('regConfirm').value.trim();
+                const group = document.getElementById('regGroup').value;
+
+                if (!nickname || !account || !pwd || !confirm) {
+                    regMessage.innerText = '所有字段均为必填';
+                    return;
+                }
+                if (!/^[A-Za-z]+$/.test(account)) {
+                    regMessage.innerText = '账号必须为纯英文字母';
+                    return;
+                }
+                if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]+$/.test(pwd)) {
+                    regMessage.innerText = '密码必须包含字母和数字，且只能使用字母数字';
+                    return;
+                }
+                if (pwd !== confirm) {
+                    regMessage.innerText = '两次密码不一致';
+                    return;
+                }
+                const users = getUsers();
+                if (users.some(u => u.account === account)) {
+                    regMessage.innerText = '账号已存在';
+                    return;
+                }
+                const newUser = {
+                    account, password: pwd, nickname, role: 'member', group, extraGroups: []
+                };
+                users.push(newUser);
+                saveUsers(users);
+                currentUser = newUser;
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                renderApp();
+            });
+
+            window.addEventListener('load', () => {
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+            });
+        })();
+    // ==================== 补丁：增强通知公告（编辑正文、权限修正）====================
+(function patchNotices() {
+    // 确保当前用户信息可用（从原系统同步）
+    let currentUser = null;
+    function syncUser() {
+        const sidebar = document.querySelector('#sidebar');
+        if (!sidebar) return;
+        const welcomeText = sidebar.querySelector('.text-white-50 strong');
+        if (!welcomeText) return;
+        const nickname = welcomeText.innerText;
+        const users = JSON.parse(localStorage.getItem('wanlian_users')) || [];
+        currentUser = users.find(u => u.nickname === nickname) || null;
+    }
+
+    // 辅助：判断是否为高级管理员或老板
+    function isAdminOrBoss() {
+        return currentUser && (currentUser.role === 'admin' || currentUser.role === 'boss');
+    }
+
+    // 获取通知（兼容旧数据，补上content字段）
+    function getNotices() {
+        return (JSON.parse(localStorage.getItem('wanlian_notices')) || []).map(n => ({
+            content: '',  // 默认正文
+            ...n
+        }));
+    }
+    function saveNotices(notices) {
+        localStorage.setItem('wanlian_notices', JSON.stringify(notices));
+    }
+
+    // 刷新当前视图（触发原系统重新渲染）
+    function refreshView() {
+        const activeLink = document.querySelector('#sidebar nav a.active');
+        if (activeLink) activeLink.click();
+    }
+
+    // 增强一条通知项：添加正文显示和编辑按钮
+    function enhanceNoticeItem(noticeDiv, notice) {
+        if (!noticeDiv || noticeDiv._enhanced) return;
+        noticeDiv._enhanced = true;
+
+        // 添加正文预览（隐藏在小字中，鼠标悬停显示）
+        const contentPreview = document.createElement('div');
+        contentPreview.className = 'small text-muted mt-1 text-truncate';
+        contentPreview.style.maxWidth = '400px';
+        contentPreview.title = notice.content || '（无正文）';
+        contentPreview.innerText = notice.content ? notice.content.substring(0, 50) + (notice.content.length > 50 ? '…' : '') : '（无正文）';
+        noticeDiv.querySelector('span:first-child')?.appendChild(contentPreview);
+
+        // 如果是高级管理员或老板，添加编辑按钮
+        if (isAdminOrBoss()) {
+            const actionSpan = noticeDiv.querySelector('span:last-child');
+            if (actionSpan && !actionSpan.querySelector('.edit-notice')) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-sm btn-outline-primary ms-2 edit-notice';
+                editBtn.dataset.id = notice.id;
+                editBtn.innerHTML = '<i class="bi bi-pencil"></i> 编辑';
+                actionSpan.appendChild(editBtn);
+
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = editBtn.dataset.id;
+                    const notices = getNotices();
+                    const notice = notices.find(n => n.id == id);
+                    if (!notice) return;
+
+                    // 弹出编辑框
+                    const newTitle = prompt('编辑标题', notice.title);
+                    if (newTitle === null) return;
+                    const newContent = prompt('编辑正文', notice.content || '');
+                    if (newContent === null) return;
+
+                    notice.title = newTitle.trim() || notice.title;
+                    notice.content = newContent.trim();
+                    saveNotices(notices);
+                    refreshView();
+                });
+            }
+        }
+    }
+
+    // 劫持发布按钮，替换为自定义弹窗（支持正文）
+    function hijackPublishButton() {
+        const publishBtn = document.getElementById('publishNoticeBtn');
+        if (!publishBtn) return;
+
+        // 移除原事件（通过克隆替换）
+        const newBtn = publishBtn.cloneNode(true);
+        publishBtn.parentNode.replaceChild(newBtn, publishBtn);
+
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!isAdminOrBoss()) {
+                alert('只有高级管理员和老板可以发布通知');
+                return;
+            }
+            const title = prompt('输入通知标题');
+            if (!title) return;
+            const content = prompt('输入通知正文（可留空）');
+            const top = confirm('是否置顶？');
+
+            const notices = getNotices();
+            notices.push({
+                id: Date.now(),
+                title,
+                content: content || '',
+                publisher: currentUser.nickname,
+                role: currentUser.role,
+                time: new Date().toISOString().slice(0, 10),
+                top
+            });
+            saveNotices(notices);
+            refreshView();
+        });
+    }
+
+    // 启动 MutationObserver 监听主内容区，当通知列表出现时进行增强
+    const mainContent = document.getElementById('mainContent');
+    if (!mainContent) return;
+
+    const observer = new MutationObserver(() => {
+        // 同步当前用户
+        syncUser();
+        if (!currentUser) return;
+
+        // 劫持发布按钮（每次渲染后重新绑定）
+        hijackPublishButton();
+
+        // 查找所有通知项
+        const noticeItems = mainContent.querySelectorAll('.alert-secondary[data-id]');
+        if (noticeItems.length === 0) return;
+
+        // 获取最新通知数据
+        const notices = getNotices();
+        noticeItems.forEach(div => {
+            const id = div.dataset.id;
+            const notice = notices.find(n => n.id == id);
+            if (notice) enhanceNoticeItem(div, notice);
+        });
+    });
+
+    observer.observe(mainContent, { childList: true, subtree: true });
+})();
+// ==================== 补丁结束 ====================
+	</script>
+</body>
+</html>
